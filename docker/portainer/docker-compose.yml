@@ -1,0 +1,30 @@
+version: "3.6"
+services:
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ee:latest # ee can be changed to ce
+    labels:
+      traefik.docker.network: backend_internal
+      traefik.enable: True
+      traefik.http.routers.portainer-http.entrypoints: http
+      traefik.http.routers.portainer-http.middlewares: https-redirect
+      traefik.http.routers.portainer-http.rule: Host(`portainer.example.com`)
+      traefik.http.routers.portainer-https.entrypoints: https
+      traefik.http.routers.portainer-https.rule: Host(`portainer.example.com`)
+      traefik.http.routers.portainer-https.tls: True
+      traefik.http.services.portainer.loadbalancer.server.port: 9443
+      traefik.http.services.portainer.loadbalancer.server.scheme: https
+    networks:
+      - exposed
+      - portainer-proxy
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /your/path/portainer:/data
+networks:
+  portainer-proxy:
+    external: false
+    name: portainer-proxy
+  exposed:
+    external: true
+    name: exposed

@@ -1,0 +1,47 @@
+version: "3.6"
+services:
+  traefik:
+    command:
+      - --providers.docker
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.http.address=:80
+      - --entrypoints.https.address=:443
+      - --accesslog
+      - --log
+      - --api
+      - --providers.file.watch=true
+      - --serversTransport.insecureSkipVerify=true
+      - --providers.file.directory=/configuration/
+      - --providers.file.watch=true
+    image: traefik:latest
+    labels:
+      traefik.docker.network: traefik_proxy
+      traefik.enable: true
+      traefik.http.middlewares.https-redirect.redirectscheme.permanent: true
+      traefik.http.middlewares.https-redirect.redirectscheme.scheme: https
+      traefik.http.routers.traefik-public-http.entrypoints: http
+      traefik.http.routers.traefik-public-http.middlewares: https-redirect
+      traefik.http.routers.traefik-public-http.rule: Host(`traefik.example.com`)
+      traefik.http.routers.traefik-public-https.entrypoints: https
+      traefik.http.routers.traefik-public-https.rule: Host(`traefik.example.com`)
+      traefik.http.routers.traefik-public-https.service: api@internal
+      traefik.http.routers.traefik-public-https.tls: true
+      traefik.http.services.traefik-public.loadbalancer.server.port: 8080
+    networks:
+      - exposed
+      - traefik_proxy
+    ports:
+      - 443:443/tcp
+      - 80:80/tcp
+    restart: unless-stopped
+    volumes:
+      - /your/path/traefik:/configuration # Certificates config and cert file(s)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+networks:
+  traefik_proxy:
+    external: true
+    name: backend_internal
+  exposed:
+    external: true
+    name: exposed

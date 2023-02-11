@@ -1,0 +1,336 @@
+# Monitoring Stack
+version: "3"
+services:
+
+  grafana: # An open source interactive data-visualization platform.
+    container_name: grafana
+    image: grafana/grafana
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy_monitor_stack # (internal only network for traefik.)
+      - traefik.http.routers.grafana-http.rule=Host(`grafana.example.com`)
+      - traefik.http.routers.grafana-http.entrypoints=http
+      - traefik.http.routers.grafana-http.middlewares=https-redirect
+      - traefik.http.routers.grafana-https.rule=Host(`grafana.example.com`)
+      - traefik.http.routers.grafana-https.entrypoints=https
+      - traefik.http.routers.grafana-https.tls=true
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+      - traefik.http.services.grafana.loadbalancer.server.scheme=http
+    networks:
+      - proxy_monitor_stack # (internal only network for traefik.)
+      - ipvlanX # (Exposed to Internet)
+    volumes:
+      - /your/path/grafana/_data:/var/lib/
+  influxdb: # An open-source time series database.
+    image: influxdb:1.8.10
+    # Look into updating this.
+    container_name: influxdb
+    restart: unless-stopped
+    # labels:
+      # - traefik.enable=true
+      # - traefik.docker.network=proxy_monitor_stack # (internal only network for traefik.)
+    ports:
+    #   # The API for InfluxDB is served on port 8086
+        - "8086:8086" #issue
+    networks:
+      - proxy_monitor_stack # (internal only network for traefik.)
+      - ipvlanX # (Exposed to Internet)
+    volumes:
+      # Mount for influxdb data directory
+      - /your/path/influxdb_data/_data:/var/lib/influxdb
+      - /your/path/influxdb_config/_data:/etc/influxdb/
+  telegraf: # A server-based agent for collecting and sending all metrics and events from databases, systems, and IoT sensors.
+    image: # Whatever you named the dockerfile build.
+    #Look into updating this.
+    container_name: telegraf
+    restart: unless-stopped
+    environment:
+      - HOST_NAME=telegraf
+    networks: #what networking does this really need???
+      - proxy_monitor_stack # (internal only network for traefik.)
+      - ipvlanX # (Exposed to Internet)
+    volumes:
+      - /your/path/telegraf/_data:/etc/telegraf/
+      - /your/path/telegraf_mibs/_data:/usr/share/mibs/
+  chronograf: # A user interface component of InfluxData's TICK stack.
+    image: chronograf:latest
+    container_name: chronograf
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy_monitor_stack # (internal only network for traefik.)
+      - traefik.http.routers.chronograf-http.rule=Host(`chronograf.example.com`)
+      - traefik.http.routers.chronograf-http.entrypoints=http
+      - traefik.http.routers.chronograf-http.middlewares=https-redirect
+      - traefik.http.routers.chronograf-https.rule=Host(`chronograf.example.com`)
+      - traefik.http.routers.chronograf-https.entrypoints=https
+      - traefik.http.routers.chronograf-https.tls=true
+      - traefik.http.services.chronograf.loadbalancer.server.port=8888
+      - traefik.http.services.chronograf.loadbalancer.server.scheme=http
+    networks:
+      - proxy_monitor_stack # (internal only network for traefik.)
+      - ipvlanX # (Exposed to Internet)
+    volumes:
+      # Mount for chronograf database
+      - /your/path/chronograf/_data:/var/lib/chronograf/
+  kapacitor:   # An open source data processing framework that makes it easy to create alerts and more.
+    image: "kapacitor"
+    container_name: kapacitor
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy_monitor_stack # (internal only network for traefik.)
+      - traefik.http.routers.kapacitor-http.rule=Host(`kapacitor.example.com`)
+      - traefik.http.routers.kapacitor-http.entrypoints=http
+      - traefik.http.routers.kapacitor-http.middlewares=https-redirect
+      - traefik.http.routers.kapacitor-https.rule=Host(`kapacitor.example.com`)
+      - traefik.http.routers.kapacitor-https.entrypoints=https
+      - traefik.http.routers.kapacitor-https.tls=true
+      - traefik.http.services.kapacitor.loadbalancer.server.port=9092
+      - traefik.http.services.kapacitor.loadbalancer.server.scheme=http
+    # Kapacitor requires network access to Influxdb
+    networks:
+      - proxy_monitor_stack # (internal only network for traefik.)
+      - ipvlanX # (Exposed to Internet)
+    volumes:
+      # Mount for kapacitor data directory
+      - /your/path/kapacitor_data/_data:/var/lib/kapacitor
+      # Mount for kapacitor configuration
+      - /your/path/kapacitor_config/_data:/etc/kapacitor/
+  prometheus: # An open-source systems monitoring and alerting toolkit. 
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy_monitor_stack # (internal only network for traefik.)
+      - traefik.http.routers.prometheus-http.rule=Host(`prometheus.example.com`)
+      - traefik.http.routers.prometheus-http.entrypoints=http
+      - traefik.http.routers.prometheus-http.middlewares=https-redirect
+      - traefik.http.routers.prometheus-https.rule=Host(`prometheus.example.com`)
+      - traefik.http.routers.prometheus-https.entrypoints=https
+      - traefik.http.routers.prometheus-https.tls=true
+      - traefik.http.services.prometheus.loadbalancer.server.port=9090
+      - traefik.http.services.prometheus.loadbalancer.server.scheme=http
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports: #issue
+      - 9090:9090
+    networks:
+      - proxy_monitor_stack # (internal only network for traefik.)
+      - ipvlanX # (Exposed to Internet)
+    volumes:
+      - /your/path/prometheus_config/_data:/etc/prometheus/
+      - /your/path/prometheus_data/_data:/prometheus
+  alertmanager:   # Handles alerts sent by client applications such as the Prometheus server. 
+    image: prom/alertmanager
+    container_name: alertmanager
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy_monitor_stack # (internal only network for traefik.)
+      - traefik.http.routers.alertmanager-http.rule=Host(`alertmanager.example.com`)
+      - traefik.http.routers.alertmanager-http.entrypoints=http
+      - traefik.http.routers.alertmanager-http.middlewares=https-redirect
+      - traefik.http.routers.alertmanager-https.rule=Host(`alertmanager.example.com`)
+      - traefik.http.routers.alertmanager-https.entrypoints=https
+      - traefik.http.routers.alertmanager-https.tls=true
+      - traefik.http.services.alertmanager.loadbalancer.server.port=9093
+      - traefik.http.services.alertmanager.loadbalancer.server.scheme=http
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+    ports:
+      - 9093:9093 #issue
+    networks:
+      - proxy_monitor_stack # (internal only network for traefik.)
+      - ipvlanX # (Exposed to Internet)
+    volumes:
+      - /your/path/alertmanager/_data:/etc/alertmanager/
+  cadvisor:   # An open-source tool developed by Google to monitor containers.
+    image: gcr.io/cadvisor/cadvisor
+    container_name: cadvisor
+    restart: unless-stopped
+    command:
+      - '-housekeeping_interval=10s'
+      - '-docker_only=true'
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy_monitor_stack # (internal only network for traefik.)
+      - traefik.http.routers.cadvisor-http.rule=Host(`examiner-cadvisor.example.com`)
+      - traefik.http.routers.cadvisor-http.entrypoints=http
+      - traefik.http.routers.cadvisor-http.middlewares=https-redirect
+      - traefik.http.routers.cadvisor-https.rule=Host(`examiner-cadvisor.example.com`)
+      - traefik.http.routers.cadvisor-https.entrypoints=https
+      - traefik.http.routers.cadvisor-https.tls=true
+      - traefik.http.services.cadvisor.loadbalancer.server.port=8080
+      - traefik.http.services.cadvisor.loadbalancer.server.scheme=http
+    networks: #???
+      - proxy_monitor_stack # (internal only network for traefik.)
+      - ipvlanX # (Exposed to Internet)
+    volumes:
+      - /:/rootfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /sys/fs/cgroup:/cgroup:ro
+      - /dev/disk/:/dev/disk:ro
+  unpoller: #  Polls a UniFi controller for influxdb.
+    container_name: up-poller
+    restart: unless-stopped
+    image: golift/unifi-poller:latest
+    volumes:
+      - /your/path/unpoller/_data:/config
+      - /your/path/unpoller/_data:/etc/unifi-poller
+    ports:
+      - 37288:37288 #issue
+    networks:
+      - proxy_monitor_stack # (internal only network for traefik.)
+      - ipvlanX # (Exposed to Internet)
+  vuegraf:   # Monitor electrical usage via Emporia Vue.
+    container_name: vuegraf
+    image: jertel/vuegraf
+    restart: unless-stopped
+    command:
+      - /opt/vuegraf/conf/vuegraf.json
+    volumes:
+      - /your/path/vuegraf/_data:/opt/vuegraf/conf:rw
+    networks:
+      - proxy_monitor_stack # (internal only network for traefik.)
+      - ipvlanX # (Exposed to Internet)
+  snmp-exporter:   # Expose SNMP data in a format which Prometheus can ingest.
+    image: "prom/snmp-exporter"
+    restart: "unless-stopped"
+    container_name: snmp-exporter
+    ports:
+      - 9116:9116 #????
+      #????? L3 Proxy??????
+    volumes:
+      - /your/path/snmp_exporter/_data:/etc/snmp_exporter
+    networks:
+      - proxy_monitor_stack # (internal only network for traefik.)
+      - ipvlanX # (Exposed to Internet)
+  varken:   # Aggregate data from the Plex ecosystem into InfluxDB.
+    hostname: varken
+    restart: unless-stopped
+    container_name: varken
+    image: boerderij/varken:latest
+    networks:
+      - proxy_monitor_stack # (internal only network for traefik.)
+      - ipvlanX # (Exposed to Internet)
+    volumes:
+      - /your/path/varken/_data:/config
+    environment:
+      - TZ=America/New_York
+      - VRKN_GLOBAL_SONARR_SERVER_IDS=1
+      - VRKN_GLOBAL_RADARR_SERVER_IDS=1
+      # - VRKN_GLOBAL_LIDARR_SERVER_IDS=false
+      - VRKN_GLOBAL_TAUTULLI_SERVER_IDS=1
+      - VRKN_GLOBAL_OMBI_SERVER_IDS=1
+      - VRKN_GLOBAL_MAXMIND_LICENSE_KEY=RIcTkdUOSdc02Kuz
+      - VRKN_INFLUXDB_URL=influxdb
+      - VRKN_INFLUXDB_PORT=8086
+      - VRKN_INFLUXDB_SSL=false
+      - VRKN_INFLUXDB_VERIFY_SSL=false
+      # - VRKN_INFLUXDB_USERNAME=root
+      # - VRKN_INFLUXDB_PASSWORD=root
+      - VRKN_TAUTULLI_1_URL=tautulli:8181
+      # - VRKN_TAUTULLI_1_FALLBACK_IP=1.1.1.1
+      - VRKN_TAUTULLI_1_APIKEY=xxxxxxxxxxxxxxxx
+      - VRKN_TAUTULLI_1_SSL=false
+      - VRKN_TAUTULLI_1_VERIFY_SSL=false
+      - VRKN_TAUTULLI_1_GET_ACTIVITY=true
+      - VRKN_TAUTULLI_1_GET_ACTIVITY_RUN_SECONDS=30
+      - VRKN_TAUTULLI_1_GET_STATS=true
+      - VRKN_TAUTULLI_1_GET_STATS_RUN_SECONDS=3600
+      - VRKN_SONARR_1_URL=sonarr.example.com
+      - VRKN_SONARR_1_APIKEY=xxxxxxxxxxxxxxxx
+      - VRKN_SONARR_1_SSL=true
+      - VRKN_SONARR_1_VERIFY_SSL=false
+      - VRKN_SONARR_1_MISSING_DAYS=7
+      - VRKN_SONARR_1_MISSING_DAYS_RUN_SECONDS=300
+      - VRKN_SONARR_1_FUTURE_DAYS=1
+      - VRKN_SONARR_1_FUTURE_DAYS_RUN_SECONDS=300
+      - VRKN_SONARR_1_QUEUE=true
+      - VRKN_SONARR_1_QUEUE_RUN_SECONDS=300
+      - VRKN_RADARR_1_URL=radarr.example.com
+      - VRKN_RADARR_1_APIKEY=xxxxxxxxxxxxxxxx
+      - VRKN_RADARR_1_SSL=true
+      - VRKN_RADARR_1_VERIFY_SSL=false
+      - VRKN_RADARR_1_QUEUE=true
+      - VRKN_RADARR_1_QUEUE_RUN_SECONDS=300
+      - VRKN_RADARR_1_GET_MISSING=true
+      - VRKN_RADARR_1_GET_MISSING_RUN_SECONDS=300
+      # - VRKN_LIDARR_1_URL=lidarr1.domain.tld:8686
+      # - VRKN_LIDARR_1_APIKEY=xxxxxxxxxxxxxxxx
+      # - VRKN_LIDARR_1_SSL=false
+      # - VRKN_LIDARR_1_VERIFY_SSL=false
+      # - VRKN_LIDARR_1_MISSING_DAYS=30
+      # - VRKN_LIDARR_1_MISSING_DAYS_RUN_SECONDS=300
+      # - VRKN_LIDARR_1_FUTURE_DAYS=30
+      # - VRKN_LIDARR_1_FUTURE_DAYS_RUN_SECONDS=300
+      # - VRKN_LIDARR_1_QUEUE=true
+      # - VRKN_LIDARR_1_QUEUE_RUN_SECONDS=300
+      - VRKN_OMBI_1_URL=ombi.example.com
+      - VRKN_OMBI_1_APIKEY=xxxxxxxxxxxxxxxx
+      - VRKN_OMBI_1_SSL=true
+      - VRKN_OMBI_1_VERIFY_SSL=false
+      - VRKN_OMBI_1_GET_REQUEST_TYPE_COUNTS=true
+      - VRKN_OMBI_1_REQUEST_TYPE_RUN_SECONDS=300
+      - VRKN_OMBI_1_GET_REQUEST_TOTAL_COUNTS=true
+      - VRKN_OMBI_1_REQUEST_TOTAL_RUN_SECONDS=300
+      - VRKN_OMBI_1_GET_ISSUE_STATUS_COUNTS=true
+      - VRKN_OMBI_1_ISSUE_STATUS_RUN_SECONDS=300
+  node-exporter:   # Client to monitor the host system.
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    expose:
+      - 9100 #???
+    networks:
+      - proxy_monitor_stack # (internal only network for traefik.)
+      - ipvlanX # (Exposed to Internet)
+  tautulli:   # Monitor activity and track various statistics of a Plex Media Server.
+    image: lscr.io/linuxserver/tautulli
+    container_name: tautulli
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy_monitor_stack # (internal only network for traefik.)
+      - traefik.http.routers.tautulli-http.rule=Host(`tautulli.example.com`)
+      - traefik.http.routers.tautulli-http.entrypoints=http
+      - traefik.http.routers.tautulli-http.middlewares=https-redirect
+      - traefik.http.routers.tautulli-https.rule=Host(`tautulli.example.com`)
+      - traefik.http.routers.tautulli-https.entrypoints=https
+      - traefik.http.routers.tautulli-https.tls=true
+      - traefik.http.services.tautulli.loadbalancer.server.port=8181
+      - traefik.http.services.tautulli.loadbalancer.server.scheme=http
+    volumes:
+      - /your/path/tautulli/_data:/config
+    networks:
+      - proxy_monitor_stack # (internal only network for traefik.)
+      - ipvlanX # (Exposed to Internet)
+# Define Networking
+networks:
+  proxy_monitor_stack: # Network for traefik only. Traefik needs to be this part of network.
+    external: true
+  ipvlanX: # (Exposed to Internet):
+    external: true

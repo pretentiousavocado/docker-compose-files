@@ -1,0 +1,250 @@
+# Arr Stack
+version: "3"
+services:
+
+  overseerr:
+    image: ghcr.io/linuxserver/overseerr
+    container_name: overseerr
+    restart: always
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy_arr_stack
+      - traefik.http.routers.overseerr-http.rule=Host(`overseerr.example.com`)
+      - traefik.http.routers.overseerr-http.entrypoints=http
+      - traefik.http.routers.overseerr-http.middlewares=https-redirect
+      - traefik.http.routers.overseerr-https.rule=Host(`overseerr.example.com`)
+      - traefik.http.routers.overseerr-https.entrypoints=https
+      - traefik.http.routers.overseerr-https.tls=true
+      - traefik.http.services.overseerr.loadbalancer.server.port=5055       
+    volumes:
+      - /your/path/overseerr:/config
+    networks:
+      - proxy_arr_stack # For Traefik Only
+      - ipvlanX # Guest Network
+  notifiarr:
+    container_name: notifiarr
+    hostname: notifiarr
+    image: golift/notifiarr
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy_arr_stack
+      - traefik.http.routers.notifiarr-http.rule=Host(`notifiarr.example.com`)
+      - traefik.http.routers.notifiarr-http.entrypoints=http
+      - traefik.http.routers.notifiarr-http.middlewares=https-redirect
+      - traefik.http.routers.notifiarr-https.rule=Host(`notifiarr.example.com`)
+      - traefik.http.routers.notifiarr-https.entrypoints=https
+      - traefik.http.routers.notifiarr-https.tls=true
+      - traefik.http.services.notifiarr.loadbalancer.server.port=5454
+    networks:
+      - proxy_arr_stack # For Traefik Only
+      - ipvlanX # Guest Network
+    volumes:
+      - /your/path/notifiarr:/config
+  organizr:
+        container_name: organizr
+        hostname: organizr
+        image: organizr/organizr:latest
+        restart: unless-stopped
+        environment:
+        - PUID=1000
+        - PGID=1000
+        - TZ=America/New_York
+        labels:
+        - traefik.enable=true
+        - traefik.docker.network=proxy_arr_stack
+        - traefik.http.routers.organizr-http.rule=Host(`organizr.example.com`)
+        - traefik.http.routers.organizr-http.entrypoints=http
+        - traefik.http.routers.organizr-http.middlewares=https-redirect
+        - traefik.http.routers.organizr-https.rule=Host(`organizr.example.com`)
+        - traefik.http.routers.organizr-https.entrypoints=https
+        - traefik.http.routers.organizr-https.tls=true
+        - traefik.http.services.organizr.loadbalancer.server.port=80
+        volumes:
+        - /your/path/organizr:/config
+        networks:
+        - proxy_arr_stack # For Traefik Only
+        - ipvlanX # Guest Network
+  radarr:
+    image: ghcr.io/linuxserver/radarr
+    container_name: radarr
+    restart: always
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy_arr_stack
+      - traefik.http.routers.radarr-http.rule=Host(`radarr.example.com`)
+      - traefik.http.routers.radarr-http.entrypoints=http
+      - traefik.http.routers.radarr-http.middlewares=https-redirect
+      - traefik.http.routers.radarr-https.rule=Host(`radarr.example.com`)
+      - traefik.http.routers.radarr-https.entrypoints=https
+      - traefik.http.routers.radarr-https.tls=true
+      - traefik.http.services.radarr.loadbalancer.server.port=7878
+    volumes:
+      - /your/path/radarr:/config
+      - /mnt/network/media:/media
+      - /mnt/network/media/downloads:/downloads
+    networks:
+      - proxy_arr_stack # For Traefik Only
+      - ipvlanX # Guest Network
+  radarr4k:
+    image: ghcr.io/linuxserver/radarr
+    container_name: radarr4k
+    restart: always
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy_arr_stack
+      - traefik.http.routers.radarr4k-http.rule=Host(`radarr4k.example.com`)
+      - traefik.http.routers.radarr4k-http.entrypoints=http
+      - traefik.http.routers.radarr4k-http.middlewares=https-redirect
+      - traefik.http.routers.radarr4k-https.rule=Host(`radarr4k.example.com`)
+      - traefik.http.routers.radarr4k-https.entrypoints=https
+      - traefik.http.routers.radarr4k-https.tls=true
+      - traefik.http.services.radarr4k.loadbalancer.server.port=7878
+    volumes:
+      - /your/path/radarr4k:/config
+      - /mnt/network/media:/media
+      - /mnt/network/media/downloads:/downloads
+    networks:
+      - proxy_arr_stack # For Traefik Only
+      - ipvlanX # Guest Network  radarrdisney:
+  sonarr:
+    image: ghcr.io/linuxserver/sonarr
+    container_name: sonarr
+    restart: always
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy_arr_stack
+      - traefik.http.routers.sonarr-http.rule=Host(`sonarr.example.com`)
+      - traefik.http.routers.sonarr-http.entrypoints=http
+      - traefik.http.routers.sonarr-http.middlewares=https-redirect
+      - traefik.http.routers.sonarr-https.rule=Host(`sonarr.example.com`)
+      - traefik.http.routers.sonarr-https.entrypoints=https
+      - traefik.http.routers.sonarr-https.tls=true
+      - traefik.http.services.sonarr.loadbalancer.server.port=8989      
+    volumes:
+      - /your/path/sonarr:/config
+      - /mnt/network/media:/media
+      - /mnt/network/media/downloads:/downloads
+    networks:
+      - proxy_arr_stack # For Traefik Only
+      - ipvlanX # Guest Network   
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - /your/path/bazarr:/config
+      - /mnt/network/media:/media
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy_arr_stack
+      - traefik.http.routers.bazarr-http.rule=Host(`bazarr.example.com`)
+      - traefik.http.routers.bazarr-http.entrypoints=http
+      - traefik.http.routers.bazarr-http.middlewares=https-redirect
+      - traefik.http.routers.bazarr-https.rule=Host(`bazarr.example.com`)
+      - traefik.http.routers.bazarr-https.entrypoints=https
+      - traefik.http.routers.bazarr-https.tls=true
+      - traefik.http.services.bazarr.loadbalancer.server.port=6767
+    restart: unless-stopped   
+    networks:
+      - proxy_arr_stack # For Traefik Only
+      - ipvlanX # Guest Network 
+  lidarr:
+    image: ghcr.io/linuxserver/lidarr
+    container_name: lidarr
+    restart: always
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy_arr_stack
+      - traefik.http.routers.lidarr-http.rule=Host(`lidarr.example.com`)
+      - traefik.http.routers.lidarr-http.entrypoints=http
+      - traefik.http.routers.lidarr-http.middlewares=https-redirect
+      - traefik.http.routers.lidarr-https.rule=Host(`lidarr.example.com`)
+      - traefik.http.routers.lidarr-https.entrypoints=https
+      - traefik.http.routers.lidarr-https.tls=true
+      - traefik.http.services.lidarr.loadbalancer.server.port=8686
+    volumes:
+      - /your/path/lidarr:/config
+      - /mnt/network/media:/media
+    networks:
+      - proxy_arr_stack # For Traefik Only
+      - ipvlanX # Guest Network    
+  readarr-text:
+        image: lscr.io/linuxserver/readarr:develop
+        container_name: readarr-text
+        environment:
+        - PUID=1000
+        - PGID=1000
+        - TZ=America/New_York
+        labels:
+        - traefik.enable=true
+        - traefik.docker.network=proxy_arr_stack
+        - traefik.http.routers.readarr-text-http.rule=Host(`readarr-text.example.com`)
+        - traefik.http.routers.readarr-text-http.entrypoints=http
+        - traefik.http.routers.readarr-text-http.middlewares=https-redirect
+        - traefik.http.routers.readarr-text-https.rule=Host(`readarr-text.example.com`)
+        - traefik.http.routers.readarr-text-https.entrypoints=https
+        - traefik.http.routers.readarr-text-https.tls=true
+        - traefik.http.services.readarr-text.loadbalancer.server.port=8787
+        volumes:
+        - /your/path/readarr-text:/config
+        - /mnt/network/media:/media
+        - /mnt/network/media/downloads:/downloads
+        restart: unless-stopped
+        networks:
+        - proxy_arr_stack # For Traefik Only
+        - ipvlanX # Guest Network
+  readarr-spoken:
+        image: lscr.io/linuxserver/readarr:develop
+        container_name: readarr-spoken
+        environment:
+        - PUID=1000
+        - PGID=1000
+        - TZ=America/New_York
+        labels:
+        - traefik.enable=true
+        - traefik.docker.network=proxy_arr_stack
+        - traefik.http.routers.readarr-spoken-http.rule=Host(`readarr-spoken.example.com`)
+        - traefik.http.routers.readarr-spoken-http.entrypoints=http
+        - traefik.http.routers.readarr-spoken-http.middlewares=https-redirect
+        - traefik.http.routers.readarr-spoken-https.rule=Host(`readarr-spoken.example.com`)
+        - traefik.http.routers.readarr-spoken-https.entrypoints=https
+        - traefik.http.routers.readarr-spoken-https.tls=true
+        - traefik.http.services.readarr-spoken.loadbalancer.server.port=8787
+        volumes:
+        - /your/path/readarr-spoken:/config
+        - /mnt/network/media:/media
+        - /mnt/network/media/downloads:/downloads
+        restart: unless-stopped
+        networks:
+        - proxy_arr_stack # For Traefik Only
+        - ipvlanX # Guest Network
+      
+networks:
+  proxy_arr_stack: # Reverse Proxy Netowrkk - Internal Only
+    external: true # Don't confuse the note about internal above with this line
+  ipvlanX: # Restricted vlan with outbound internet access.
+    external: true
