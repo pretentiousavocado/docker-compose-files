@@ -1,3 +1,5 @@
+# This file is to configure vlan(s) on the host to be used within docker.
+
 # Debian  (Host Network)
 ## (etc/network/interfaces)
     # The primary network interface

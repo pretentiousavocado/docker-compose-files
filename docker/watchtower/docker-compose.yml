@@ -1,6 +1,6 @@
 version: "3"
 services:
- watchtower:
+ watchtower: #
         container_name: watchtower
         image: containrrr/watchtower
         environment:

@@ -7,3 +7,14 @@ tls:
     # second certificate
     - certFile: /path/to/other.cert
       keyFile: /path/to/other.key
+
+
+# This configuration expects that you have your own SSL cert(s).
+# I include my full SSL cert chain (intermediate and root) in my cert file.
+# The key file is in plain text.
+# Depending on your cert/key, you may have to convert them. 
+# (E.g. below coverts a single .pfx or .p12,
+# - separating the key and cert into plain text x509 encoded files.)
+# openssl pkcs12 -in infile.p12 -out outfile.crt -nokeys
+# openssl pkcs12 -in infile.p12 -nodes -nocerts | openssl rsa -out outfile.key
+# Google OpenSSL command for more information.
